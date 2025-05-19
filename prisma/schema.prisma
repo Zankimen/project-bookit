@@ -1,0 +1,136 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum JenisKelamin {
+  LAKI_LAKI
+  PEREMPUAN
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+enum TiketStatus {
+  AVAILABLE
+  SOLD
+}
+
+model User {
+  user_id         String         @id @default(uuid())
+  email           String         @unique
+  password        String
+  deleted_at      DateTime?
+  pembeli         Pembeli?
+  event_creator   EventCreator?
+  orders          Order[]
+  event_histories EventHistory[]
+
+  @@index([email])
+}
+
+model Pembeli {
+  pembeli_id      String       @id @default(uuid())
+  user_id         String       @unique
+  user            User         @relation(fields: [user_id], references: [user_id])
+  nama_pembeli    String
+  jenis_kelamin   JenisKelamin
+  tanggal_lahir   DateTime
+  foto_profil     String?
+}
+
+model EventCreator {
+  creator_id         String    @id @default(uuid())
+  user_id            String    @unique
+  user              User       @relation(fields: [user_id], references: [user_id])
+  nama_brand        String
+  deskripsi_creator String?
+  foto_profil       String?
+  no_rekening       String?
+  kontak            String?
+  events            Event[]
+}
+
+model Event {
+  event_id          String    @id @default(uuid())
+  nama_event        String
+  deskripsi         String?
+  kota_kabupaten    String
+  lokasi            String
+  tanggal_mulai     DateTime
+  tanggal_selesai   DateTime
+  foto_event        String?
+  kategori_event    String
+  creator_id        String
+  creator           EventCreator @relation(fields: [creator_id], references: [creator_id])
+  tipe_tikets       TipeTiket[]
+  event_histories   EventHistory[]
+}
+
+model TipeTiket {
+  tiket_type_id     String    @id @default(uuid())
+  event_id          String
+  event             Event     @relation(fields: [event_id], references: [event_id])
+  nama              String
+  harga             Decimal
+  jumlah_tersedia   Int
+  tikets            Tiket[]
+}
+
+model Tiket {
+  tiket_id          String    @id @default(uuid())
+  tiket_type_id     String
+  tipe_tiket        TipeTiket @relation(fields: [tiket_type_id], references: [tiket_type_id])
+  order_id          String
+  order             Order     @relation(fields: [order_id], references: [order_id])
+  status            TiketStatus
+  kode_qr           String?
+  dibuat_di         DateTime  @default(now())
+}
+
+model Order {
+  order_id          String    @id @default(uuid())
+  user_id           String
+  user              User      @relation(fields: [user_id], references: [user_id])
+  jumlah_total      Decimal
+  status            OrderStatus
+  dibuat_di         DateTime  @default(now())
+  tikets            Tiket[]
+  pembayaran        Pembayaran?
+}
+
+model Pembayaran {
+  payment_id        String    @id @default(uuid())
+  order_id          String    @unique
+  order             Order     @relation(fields: [order_id], references: [order_id])
+  invoice_id        String?
+  jumlah            Decimal
+  status            String
+  waktu_transaksi   DateTime  @default(now())
+  invoice           Invoice?
+}
+
+model Invoice {
+  invoice_id        String    @id @default(uuid())
+  pembayaran_id     String    @unique
+  pembayaran        Pembayaran @relation(fields: [pembayaran_id], references: [payment_id])
+  nomor_invoice     String
+  jumlah            Decimal
+  dibuat_di         DateTime  @default(now())
+}
+
+model EventHistory {
+  history_id        String    @id @default(uuid())
+  event_id          String
+  event             Event     @relation(fields: [event_id], references: [event_id])
+  user_id           String
+  user              User      @relation(fields: [user_id], references: [user_id])
+  catatan_waktu     DateTime  @default(now())
+}
